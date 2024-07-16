@@ -2,7 +2,9 @@ import { beginCell, Cell, contractAddress, fromNano, StateInit, storeStateInit, 
 import { hex } from "../build/main.compiled.json"
 import qs from "qs";
 import qrcode from "qrcode-terminal"
+import dotenv from "dotenv";
 
+dotenv.config()
 
 async function deployScript() {
 
@@ -23,11 +25,11 @@ async function deployScript() {
     const address = contractAddress(0, stateInit)
 
     console.log("The address of the contract is", address.toString())
-    console.log("Please scan the QR-code below to deploy the contract:")
+    console.log(`Please scan the QR-code below to deploy the contract to ${process.env.TESTNET ? "testnet" : "mainnet"}:`)
 
     let link = 
         `ton://transfer/`
-        + address.toString({testOnly: true})
+        + address.toString({testOnly: Boolean(process.env.TESTNET)})
         + '?'
         + qs.stringify({
             text: "Deploy contract",

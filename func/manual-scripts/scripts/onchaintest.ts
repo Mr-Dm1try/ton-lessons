@@ -4,7 +4,9 @@ import { getHttpV4Endpoint } from "@orbs-network/ton-access"
 import { TonClient4 } from "@ton/ton"
 import qs from "qs"
 import qrcode from "qrcode-terminal"
+import dotenv from "dotenv";
 
+dotenv.config()
 
 async function onchainTestScript() {
     const code = Cell.fromBoc(Buffer.from(hex, "hex"))[0]
@@ -17,7 +19,7 @@ async function onchainTestScript() {
 
     const address = contractAddress(0, stateInit)
 
-    const endpoint = await getHttpV4Endpoint({ network: "testnet" })
+    const endpoint = await getHttpV4Endpoint({ network: process.env.TESTNET ? "testnet" : "mainnet" })
     const client = new TonClient4({ endpoint })
 
     const latestBlock = await client.getLastBlock()
@@ -30,7 +32,7 @@ async function onchainTestScript() {
 
     let link = 
         `ton://transfer/`
-        + address.toString({testOnly: true})
+        + address.toString({testOnly: Boolean(process.env.TESTNET)})
         + '?'
         + qs.stringify({
             text: "Simple test transaction",
