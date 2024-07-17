@@ -1,0 +1,29 @@
+#include "imports/stdlib.fc";
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    slice cs = in_msg_full.begin_parse();   ;; cell slice
+    int flags = cs~load_uint(4);
+    slice sender_address = cs~load_msg_addr();
+
+    int op = in_msg_body~load_uint(32);     ;; operational code
+
+    if (op == 1) {
+        ;; counter logic
+        slice ds = get_data().begin_parse();
+        int counter = ds~load_uint(32);
+        int increment = in_msg_body~load_uint(32);
+        set_data(
+            begin_cell().store_uint(counter + increment, 32).store_slice(sender_address).end_cell()
+        );
+    }
+
+}
+
+;; Getter
+(int, slice) get_contract_storage() method_id {
+    slice ds = get_data().begin_parse();
+    return (
+        ds~load_uint(32),
+        ds~load_msg_addr()
+    ); 
+}
