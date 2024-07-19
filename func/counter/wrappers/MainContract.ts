@@ -1,22 +1,20 @@
-import { Address, beginCell, Cell, Contract, ContractABI, contractAddress, ContractProvider, Sender, SendMode, StateInit } from "@ton/core";
+import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, Sender, SendMode } from "@ton/core";
 
 export type MainContractConfig = {
     number: number;
     address: Address;
+    ownerAddress: Address;
 }
 
 export function mainConfigToCell(config: MainContractConfig): Cell {
     return beginCell()
         .storeUint(config.number, 32)
         .storeAddress(config.address)
+        .storeAddress(config.ownerAddress)
         .endCell()
 }
-
+ 
 export class MainContract implements Contract {
-
-    // address: Address;
-    // init?: Maybe<StateInit>;
-    // abi?: Maybe<ContractABI>;
 
     constructor(
         readonly address: Address,
@@ -47,11 +45,63 @@ export class MainContract implements Contract {
         )
     }
 
+    async sendFunds(
+        provider: ContractProvider,
+        sender: Sender,
+        value: bigint
+    ) {
+        await provider.internal(
+            sender,
+            {
+                value: value,
+                sendMode: SendMode.PAY_GAS_SEPARATELY,
+                body: beginCell().storeUint(2, 32).endCell()
+            }
+        )
+    }
+
+    async sendWithdrawRequest(
+        provider: ContractProvider,
+        sender: Sender,
+        value: bigint,
+        amount: bigint
+    ) {
+        await provider.internal(
+            sender,
+            {
+                value: value,
+                sendMode: SendMode.PAY_GAS_SEPARATELY,
+                body: beginCell().storeUint(3, 32).storeCoins(amount).endCell()
+            }
+        )
+    }
+
+    async sendWithoutBody(
+        provider: ContractProvider,
+        sender: Sender,
+        value: bigint
+    ) {
+        await provider.internal(
+            sender,
+            {
+                value: value,
+                sendMode: SendMode.PAY_GAS_SEPARATELY,
+                body: beginCell().endCell()
+            }
+        )
+    }
+
     async getData(provider: ContractProvider) {
         const { stack } = await provider.get("get_contract_storage", [])
         return {
             counter: stack.readNumber(),
-            recent_sender: stack.readAddress()
+            recentSender: stack.readAddress(),
+            ownerAddress: stack.readAddress()
         }
+    }
+
+    async getBalance(provider: ContractProvider) {
+        const { stack } = await provider.get("balance", [])
+        return stack.readNumber()
     }
 }
