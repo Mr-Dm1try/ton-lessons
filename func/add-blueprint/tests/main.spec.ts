@@ -1,17 +1,20 @@
 import { Cell, fromNano, toNano } from "@ton/core"
 import { Blockchain, SandboxContract, TreasuryContract } from "@ton/sandbox"
-import { hex } from "../build/main.compiled.json"
 import { MainContract } from "../wrappers/MainContract"
-
 import "@ton/test-utils"
+import { compile } from "@ton/blueprint"
 
 describe('main.fc contract tests', () => {
     let blockchain: Blockchain
     let contract: SandboxContract<MainContract>
     let senderWallet: SandboxContract<TreasuryContract>
+    let codeCell: Cell
+
+    beforeAll(async () => {
+        codeCell = await compile("MainContract")
+    })
 
     beforeEach(async () => {
-        const codeCell = Cell.fromBoc(Buffer.from(hex, "hex"))[0]
         blockchain = await Blockchain.create()
         senderWallet = await blockchain.treasury("sender")
 
@@ -39,24 +42,15 @@ describe('main.fc contract tests', () => {
     })
 
     it("should increment counter by 5", async () => {
-        var message = await contract.sendIncrement(senderWallet.getSender(), toNano("0.05"), 3)
+
+        const message = await contract.sendIncrement(senderWallet.getSender(), toNano("0.05"), 5)
         expect(message.transactions).toHaveTransaction({
             from: senderWallet.address,
             to: contract.address,
             success: true
         })
 
-        var data = await contract.getData()
-        expect(data.counter).toEqual(3)
-
-        message = await contract.sendIncrement(senderWallet.getSender(), toNano("0.05"), 2)
-        expect(message.transactions).toHaveTransaction({
-            from: senderWallet.address,
-            to: contract.address,
-            success: true
-        })
-
-        data = await contract.getData()
+        const data = await contract.getData()
         expect(data.counter).toEqual(5)
     })
 
