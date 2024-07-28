@@ -1,7 +1,8 @@
+import { fromNano } from '@ton/core'
 import { TonConnectButton } from '@tonconnect/ui-react'
 import './App.css'
 import { useMainContract } from './hooks/useMainContract'
-import { fromNano } from '@ton/core'
+import { useTonConnect } from './hooks/useTonConnect'
 
 // EQAf0pL8wWg1HVfjgL_urrZQnBKhgkyuohkRO_KRzIQkync2
 
@@ -11,8 +12,13 @@ function App() {
     contractBalance,
     recentSender,
     counter,
-    ownerAddress
+    ownerAddress,
+    sendIncrement,
+    sendDeposit,
+    sendWithdrawal
   } = useMainContract()
+
+  const { connected } = useTonConnect()
 
   return (
     <div className='App'>
@@ -22,13 +28,32 @@ function App() {
           <b>Our Contract Address:</b>
           <div className='Hint'>{contractAddress?.slice(0, 30) + '...'}</div>
           <b>Our Contract Balance:</b>
-          <div className='Hint'>{contractBalance ? fromNano(contractBalance) : 'Loading...'}</div>
+          {contractBalance && (<div className='Hint'>{fromNano(contractBalance)}</div>)}
         </div>
 
         <div className='Card'>
           <b>Counter value:</b>
           <div className='Hing'>{counter ?? 'Loading...'}</div>
         </div>
+
+        {connected && (
+          <div>
+            <a onClick={() => sendIncrement()}>
+              Inctement by 3
+            </a>
+            <br />
+            <a onClick={() => sendDeposit()}>
+              Request deposit of 1 TON
+            </a>
+            <br />
+            <a onClick={() => sendWithdrawal()}>
+              Request withdraw of 0.1 TON
+            </a>
+          </div>
+        )}
+
+
+
       </div>
     </div>
   )
