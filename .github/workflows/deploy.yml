@@ -18,12 +18,15 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: 16
+
+      - name: Move to working dir
+        run: cd func/contract-front_end
       
       - name: Instal dependencies
         uses: bahmutov/npm-install@v1
 
       - name: Build
-        uses: npm run build
+        run: npm run build
 
       - name: Upload build files
         uses: actions/upload-artivact@v2
