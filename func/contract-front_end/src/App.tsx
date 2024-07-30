@@ -10,9 +10,9 @@ function App() {
   const {
     contractAddress,
     contractBalance,
-    recentSender,
+    // recentSender,
     counter,
-    ownerAddress,
+    // ownerAddress,
     sendIncrement,
     sendDeposit,
     sendWithdrawal
