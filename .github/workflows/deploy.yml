@@ -18,17 +18,15 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: 16
-
-      - name: Move to working dir
-        run: cd func/contract-front_end
       
       - name: Instal dependencies
         uses: bahmutov/npm-install@v1
         with:
-          working-directory: ./
+          working-directory: ./func/contract-front_end
 
       - name: Build
         run: npm run build
+        working-directory: ./func/contract-front_end
 
       - name: Upload build files
         uses: actions/upload-artifact@v2
