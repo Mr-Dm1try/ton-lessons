@@ -29,7 +29,7 @@ jobs:
         run: npm run build
 
       - name: Upload build files
-        uses: actions/upload-artivact@v2
+        uses: actions/upload-artifact@v2
         with:
           name: build-files
           path: ./dist
