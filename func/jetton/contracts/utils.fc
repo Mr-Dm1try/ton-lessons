@@ -1,0 +1,39 @@
+#include "imports/stdlib.fc";
+
+cell calculate_wallet_state(slice owner_address, slice minter_address, cell wallet_code) inline_ref {
+    return begin_cell()
+        .store_uint(0, 2)
+        .store_dict(wallet_code)
+        .store_dict(pack_wallet_data(0, owner_address, minter_address, wallet_code))
+        .store_uint(0, 1)
+        .end_cell();
+}
+
+cell pack_wallet_data(int balance, slice owner_address, slice minter_address, cell wallet_code) inline_ref {
+    return begin_cell()
+        .store_coins(balance)
+        .store_slice(owner_address)
+        .store_slice(minter_address)
+        .store_ref(wallet_code)
+        .end_cell();
+}
+
+slice calculate_wallet_address(cell state_init) inline_ref {
+    return begin_cell()
+        .store_uint(4, 3)
+        .store_int(workchain(), 8)
+        .store_uint(cell_hash(state_init), 256)
+        .end_cell()
+        .begin_parse();
+}
+
+slice calculate_wallet_address(slice owner_address, slice minter_address, cell wallet_code) inline_ref {
+    return calculate_wallet_address(calculate_wallet_state(owner_address, minter_address, wallet_code));
+}
+
+int workchain() asm "0 PUSHINT";
+
+() force_chain(slice addr) impure inline_ref {
+    (int chain, _) = parse_std_addr(addr);
+    throw_unless(333, wc == workchain());
+}
