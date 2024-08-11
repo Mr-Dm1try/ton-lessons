@@ -296,7 +296,7 @@ cell preload_ref(slice s) asm "PLDREF";
 ;; (slice, int) ~load_int(slice s, int len) asm(s len -> 1 0) "LDIX";
 
 ;;; Loads an unsigned [len]-bit integer from a slice [s].
-(slice, int) load_uint(slice s, int len);
+;; (slice, int) load_uint(slice s, int len);
 
 ;;; Preloads a signed [len]-bit integer from a slice [s].
 ;; int preload_int(slice s, int len) asm "PLDIX";
@@ -417,7 +417,7 @@ cell end_cell(builder b) asm "ENDC";
 builder store_ref(builder b, cell c) asm(c b) "STREF";
 
 ;;; Stores an unsigned [len]-bit integer `x` into `b` for `0 ≤ len ≤ 256`.
-builder store_uint(builder b, int x, int len);
+;; builder store_uint(builder b, int x, int len);
 
 ;;; Stores a signed [len]-bit integer `x` into `b` for` 0 ≤ len ≤ 257`.
 ;; builder store_int(builder b, int x, int len) asm(x b len) "STIX";

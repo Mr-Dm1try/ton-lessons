@@ -1,5 +1,7 @@
 #include "imports/stdlib.fc";
 
+int workchain() asm "0 PUSHINT";
+
 cell calculate_wallet_state(slice owner_address, slice minter_address, cell wallet_code) inline_ref {
     return begin_cell()
         .store_uint(0, 2)
@@ -18,7 +20,7 @@ cell pack_wallet_data(int balance, slice owner_address, slice minter_address, ce
         .end_cell();
 }
 
-slice calculate_wallet_address(cell state_init) inline_ref {
+slice calculate_wallet_address_from_cell(cell state_init) inline_ref {
     return begin_cell()
         .store_uint(4, 3)
         .store_int(workchain(), 8)
@@ -28,12 +30,11 @@ slice calculate_wallet_address(cell state_init) inline_ref {
 }
 
 slice calculate_wallet_address(slice owner_address, slice minter_address, cell wallet_code) inline_ref {
-    return calculate_wallet_address(calculate_wallet_state(owner_address, minter_address, wallet_code));
+    return calculate_wallet_address_from_cell(calculate_wallet_state(owner_address, minter_address, wallet_code));
 }
 
-int workchain() asm "0 PUSHINT";
 
 () force_chain(slice addr) impure inline_ref {
     (int chain, _) = parse_std_addr(addr);
-    throw_unless(333, wc == workchain());
+    throw_unless(333, chain == workchain());
 }

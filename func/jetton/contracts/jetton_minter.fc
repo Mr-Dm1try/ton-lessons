@@ -2,14 +2,18 @@
 #include "imports/op_codes.fc";
 #include "./utils.fc";
 
+;; 6905(computational_gas_price) * 1000(cur_gas_price) = 6905000
+;; ceil(6905000) = 10000000 ~= 0.01 TON
+int provide_address_gas_consumption() asm "10000000 PUSHINT";
+
 (int, slice, cell, cell) load_data() inline {
     slice ds = get_data().begin_parse();
 
     return (
-        ds.load_coins(),        ;; total supply
-        ds.load_msg_addr(),     ;; admin address
-        ds.load_ref(),          ;; content
-        ds.load_ref()           ;; wallet code
+        ds~load_coins(),        ;; total supply
+        ds~load_msg_addr(),     ;; admin address
+        ds~load_ref(),          ;; content
+        ds~load_ref()           ;; wallet code
     );
 }
 
@@ -19,6 +23,7 @@
         .store_slice(admin_address)
         .store_ref(content)
         .store_ref(wallet_code)
+        .end_cell()
     );
 }
 
@@ -54,7 +59,7 @@
 
         slice master_cs = master_msg.begin_parse();
         master_cs.skip_bits(32 + 64);   ;; op + query_id
-        int jetton_amount = master_cs.load_coins();
+        int jetton_amount = master_cs~load_coins();
 
         mint_tokens(receiver_address, wallet_code, amount, master_msg);
         save_data(total_supply + jetton_amount, admin_address, content, wallet_code);
@@ -85,6 +90,33 @@
         return ();
     }
 
+    if (op == op::provide_wallet_address()) {
+        throw_unless(75, msg_value > fwd_fee + provide_address_gas_consumption());
+
+        slice owner_address = in_msg_body~load_msg_addr();
+        int include_address? = in_msg_body~load_uint(1);
+
+        cell included_address = include_address?
+            ? begin_cell().store_slice(owner_address).end_cell()
+            : null();
+
+        var msg = begin_cell()
+                .store_uint(0x18, 6)
+                .store_slice(sender)
+                .store_coins(0)
+                .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+                .store_uint(op::take_wallet_address(), 32)
+                .store_uint(query_id, 64);
+
+        if(is_resolvable?(owner_address)) {
+            msg.store_slice(calculate_wallet_address(owner_address, my_address(), wallet_code));
+        } else {
+            msg.store_uint(0,2);
+        }
+
+        send_raw_message(msg.store_maybe_ref(included_address).end_cell(), 64);    ;; all the remaining value
+    }
+
     if (op == 3) {  ;; change admin
         throw_unless(73, equal_slices(sender, admin_address));
         save_data(total_supply, in_msg_body~load_msg_addr(), content, wallet_code);
@@ -100,7 +132,7 @@
 
 () mint_tokens(slice receiver_address, cell wallet_code, int amount, cell master_msg) impure {
     cell state_init = calculate_wallet_state(receiver_address, my_address(), wallet_code);
-    cell wallet_address = calculate_wallet_address(state_init);
+    slice wallet_address = calculate_wallet_address_from_cell(state_init);
     cell msg = begin_cell()
         .store_uint(0x18, 6)
         .store_slice(wallet_address)
@@ -110,4 +142,10 @@
         .end_cell();
 
     send_raw_message(msg, 1);   ;; pay transfer fees separately, revert on errors
+}
+
+int is_resolvable?(slice addr) inline_ref {
+    (int wc, _) = parse_std_addr(addr);
+
+    return wc == workchain();
 }
