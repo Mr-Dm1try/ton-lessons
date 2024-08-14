@@ -1,0 +1,84 @@
+#include "imports/stdlib.fc";
+
+(int, int, slice, slice, cell, slice) load_data() inline_ref {
+    slice ds = get_data().begin_parse();
+
+    var (index, collection_address) = (ds~load_uint(64), ds~load_msg_addr());
+    if (ds.slice_bits() > 0) {
+        return (-1, index, collection_address, ds~load_msg_addr(), ds~load_ref(), ds~load_msg_addr());
+    } else {
+        return (0, index, collection_address, null(), null(), null()); ;; not initialized yet
+    }
+}
+
+() save_data(int index, slice collection_address, slice owner_address, cell content, slice editor_address) impure inline_ref {
+    set_data(begin_cell()
+        .store_uint(index, 64)
+        .store_slice(collection_address)
+        .store_slice(owner_address)
+        .store_ref(content)
+        .store_slice(editor_address)
+        .end_cell());
+}
+
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    if (in_msg_body.slice_empty?()) { 
+        return ();
+    }
+
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+
+    if (flags & 1) { ;; ignore all bounced messages
+        return ();
+    }
+    slice sender = cs~load_msg_addr();
+
+    cs~load_msg_addr(); ;; skip dst
+    cs~load_coins();    ;; skip value
+    cs~load_bits(1);    ;; skip ex cur
+    int fwd_fee = muldiv(cs~load_coins(), 3, 2); ;; we use message fwd_fee for estimation of forward_payload costs
+
+    var (inift?, index, collection_address, owner_address, content, editor_address) = load_data();
+
+    if (~ init?) {
+        throw_unless(405, equal_slices(sender, collection_address));
+        save_data(index, collection_address, in_msg_body~load_msg_addr(), in_msg_body~load_ref(), in_msg_body~load_msg_addr());
+        return ();
+    }
+
+    int op = in_msg_body~load_uint(32);
+    int query_id = in_msg_body~load_uint(64);
+
+    if (op == op::transfer()) {
+        transfer_ownership(my_balance, index, collection_address, owner_address, content, editor_address, sender, query_id, in_msg_body, fwd_fee);
+        return ();
+    }
+
+    if (op == op::get_static_data()) {
+        send_message(
+            sender,
+            0,
+            op::report_static_data(),
+            query_id,
+            begin_cell()
+                .store_uint(index, 64)
+                .store_slice(collection_address),
+            64      ;; carry all the remaining value of the inbound message
+        );
+        return ();
+    }
+
+    if (op == op::transfer_editorship()) {
+        transfer_editorship(my_balance, index, collection_address, owner_address, content, editor_address, sender_address, query_id, in_msg_body, fwd_fee);
+        return ();
+    }
+
+    if (op == op::edit_content()) {
+        throw_unless(410, equal_slices(sender, editor_address));
+        save_data(index, collection_address, owner_address, in_msg_body~load_ref(), editor_address);
+    }
+
+    throw(0xffff);
+}
