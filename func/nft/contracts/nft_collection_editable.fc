@@ -146,6 +146,38 @@ slice calculate_nft_item_address(int wc, cell state_init) {
         save_data(owner_address, next_item_index, in_msg_body~load_ref(), nft_item_code, in_msg_body~load_ref());
     }
 
-
     throw(0xffff);
+}
+
+(int, cell, slice) get_collection_data() method_id {
+    var (owner_address, next_item_index, content, _, _) = load_data();
+    cell nft_content = content.begin_parse()~load_ref();
+
+    return (next_item_index, nft_content, owner_address);
+}
+
+slice get_nft_address_by_index(int index) {
+    var (_, _, _, nft_item_code, _) = load_data();
+
+    return calculate_nft_item_address(workchain(), calculate_nft_item_state_init(index, nft_item_code));
+}
+
+(int, int, slice) royalty_params() {
+    var (_, _, _, _, royalty) = load_data();
+    slice cs = royalty.begin_parse();
+
+    return (cs~load_uint(16), cs~load_uint(16), cs~load_msg_addr());
+}
+
+cell get_nft_content(int index, cell individual_nft_content) method_id {
+    var (_, _, content, _, _) = load_data();
+    slice cs = content.begin_parse();
+    cs~load_ref();
+
+    slice common_content = cs~load_ref().begin_parse();
+    return (begin_cell()
+        .store_uint(1, 8) ;; offchain tag
+        .store_slice(common_content)
+        .store_ref(individual_nft_content)
+        .end_cell());
 }
